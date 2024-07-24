@@ -5,8 +5,6 @@ Run with `streamlit run HomePage.py`
 
 import streamlit as st
 
-import webbrowser
-
 # ============= PAGE SETUP ============
 st.set_page_config(page_title="SHEMS", page_icon="♻️", layout="wide")
 
@@ -87,8 +85,6 @@ if st.session_state.page == 0:
         c1, c2 = st.columns([1.7,4], vertical_alignment="center")
         with c1:
             st.markdown("<h1>Greener future with <span style='color: #487955'>energy storage</span> solutions</h1>", unsafe_allow_html=True)
-            if st.button("Get Started",key="one",type="primary"):
-                pass
         with c2:
             st.image('images/home.png', use_column_width=True)
 

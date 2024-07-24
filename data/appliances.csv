@@ -1,0 +1,5 @@
+,Appliance ID,Appliance Name,Description,Input Measurement (kWh),Output Measurement (°C)
+0,1,Fridge,Standard Fridge,0.2,-5
+1,2,Air-conditioner,1HP Air-conditioner,0.5,-10
+2,3,Air-conditioner,2HP Air-conditioner,1.0,-15
+3,4,Fridge,Mini Fridge,0.1,-3
