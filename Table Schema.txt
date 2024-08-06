@@ -1,0 +1,28 @@
+Tables:
+    Homes
+        - HomeID (primary key)
+        - Address
+        - Others
+    
+    Appliances
+        - ApplianceID (primary key)
+        - HomeID (foreign key referencing Homes)
+        - ApplianceName
+        - ApplianceType
+        - StartValue (Start this appliance at..)
+        - StopValue (Stop this appliance at..)
+    
+    EnergyUsage
+        - EnergyUsageID (primary key)
+        - HomeID (foreign key referencing Homes)
+        - ApplianceID (foreign key referencing Appliances)
+        - DateTime (hourly timestamp)
+        - EnergyConsumed
+        - EnergyProduced
+        - Current Output
+
+
+Top Appliances:
+    - Hisense Deep Freezer
+    - Nexus Refrigerator
+    - LG Air Conditioner
