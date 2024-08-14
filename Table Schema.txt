@@ -1,6 +1,7 @@
 Tables:
     Homes
         - HomeID (primary key)
+        -HomeName
         - Address
         - Others
     
@@ -11,6 +12,7 @@ Tables:
         - ApplianceType
         - StartValue (Start this appliance at..)
         - StopValue (Stop this appliance at..)
+        - ApplianceCondtion (On/Off)
     
     EnergyUsage
         - EnergyUsageID (primary key)
@@ -23,6 +25,6 @@ Tables:
 
 
 Top Appliances:
-    - Hisense Deep Freezer
-    - Nexus Refrigerator
-    - LG Air Conditioner
+    - Hisense Deep Freezer (H170CF 142L Chest Freezer): Consumption 0.664 kwh (https://hisenseshop.co.tz/product/hisense-h170cf-142l-chest-freezer/)
+    - Scanfrost Refrigerator (): Consumption 0.879kwh/24h ()
+    - LG Air Conditioner (S4-Q12JA3QG 1.5HP): Consumption (3,517W) and Cooling Capacity (12,000Btu/h, Max: 13,000Btu) EER (3.01W/W 10.26Btu/h.W) (https://www.lg.com/africa/residential-air-conditioners/lg-S4-Q12JA3QG)
