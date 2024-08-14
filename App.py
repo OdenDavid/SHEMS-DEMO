@@ -5,8 +5,7 @@ Run with `streamlit run App.py`
 
 import streamlit as st
 import random
-from datetime import datetime, timedelta
-import uuid
+from datetime import datetime
 import math
 
 import pandas as pd
@@ -281,7 +280,8 @@ elif st.session_state.page == "dashboard":
         cursor.execute('''
             SELECT 
                 A.ApplianceName, 
-                A.ApplianceType, 
+                A.ApplianceType,
+                A.ApplianceCondition,
                 EU.EnergyConsumed, 
                 EU.CurrentOutput
             FROM 
@@ -299,11 +299,12 @@ elif st.session_state.page == "dashboard":
             # Group the results by appliance and get the latest values
             appliance_data = {}
             for appliance in appliances:
-                name, description, energy_consumed, current_output = appliance
+                name, description, condition, energy_consumed, current_output = appliance
                 if name not in appliance_data:
                     appliance_data[name] = {
                         'Appliance Name': name,
                         'Appliance Description': description,
+                        'Appliance Condition': condition,
                         'Current Energy Consumption (kWh)': energy_consumed,
                         'Current Output (°C)': current_output
                     }
@@ -316,7 +317,8 @@ elif st.session_state.page == "dashboard":
 
         # Get all unique appliances
         cursor.execute('''
-            SELECT DISTINCT 
+            SELECT DISTINCT
+                ApplianceID, 
                 ApplianceName, 
                 ApplianceType
             FROM 
@@ -331,14 +333,17 @@ elif st.session_state.page == "dashboard":
             for name, description in allappliances
         ]
 
+        # Create a dictionary to map appliance names to IDs
+        appliance_ids = {appliance[1]: appliance[0] for appliance in allappliances}
+
         option = st.selectbox(
             "Add an appliance to your home",
             appliance_list,
             index=None,
             placeholder="Select an appliance",
         )
-        st.number_input("Start this appliance at (°C)", min_value=-30, max_value=30, value=15, help="This appliance will turn on automatically at this value", label_visibility="visible")
-        st.number_input("Stop this appliance at (°C)", min_value=-30, max_value=30, value=-15, help="This appliance will turn off automatically at this value", label_visibility="visible")
+        start_value = st.number_input("Start this appliance at (°C)", min_value=-30, max_value=30, value=15, help="This appliance will turn on automatically at this value", label_visibility="visible")
+        stop_value = st.number_input("Stop this appliance at (°C)", min_value=-30, max_value=30, value=-15, help="This appliance will turn off automatically at this value", label_visibility="visible")
 
         if st.button("Add",type="primary",use_container_width=True):
             allhomeappliances = []
@@ -348,7 +353,35 @@ elif st.session_state.page == "dashboard":
             if option.split(' - ')[0] in allhomeappliances:
                 st.error('{} already added to {}'.format(option, st.session_state.home_name), icon="🚨")
             else:
+                # Get the ApplianceID from the dictionary
+                appliance_id = appliance_ids[option.split(' - ')[0]]
+                
+                # Add appliance to table
+                cursor.execute('''
+                    INSERT INTO Appliances (ApplianceID, HomeID, ApplianceName, ApplianceType, StartValue, StopValue, ApplianceCondition)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (appliance_id, home_id, option.split(' - ')[0], option.split(' - ')[1], start_value, stop_value, 'True'))
+                conn.commit()
+                conn.close()
+
                 st.success("Successfully Added {}".format(option))
+
+    def update_appliance_condition(home_id, appliance_name, condition):
+        cursor.execute('''
+            UPDATE Appliances
+            SET ApplianceCondition = ?
+            WHERE HomeID = ? AND ApplianceName = ?
+        ''', (condition, home_id, appliance_name))
+        conn.commit()
+
+    def get_appliance_condition(home_id, appliance_name):
+        cursor.execute('''
+            SELECT ApplianceCondition
+            FROM Appliances
+            WHERE HomeID = ? AND ApplianceName = ?
+        ''', (home_id, appliance_name))
+        condition = cursor.fetchone()[0]
+        return condition
 
     def get_energy_data(home_id, filter_by):
         """
@@ -517,5 +550,11 @@ elif st.session_state.page == "dashboard":
                 st.markdown(f"**{appliance['Appliance Name']}: {appliance['Appliance Description']}**", unsafe_allow_html=True)
                 st.write(f"**Current Energy Consumption:** {str(round(appliance['Current Energy Consumption (kWh)'], 1))} kWh")
                 st.write(f"**Current Output:** {str(math.floor(appliance['Current Output (°C)']))} °C")
-                st.toggle("Off/On",value=True,key=n_row)
+                
+                initial_condition = get_appliance_condition(st.session_state.homeid, appliance['Appliance Name'])
+                print(initial_condition, appliance['Appliance Name'], st.session_state.homeid)
+                if st.toggle("Off/On", value=bool(), key=n_row):
+                    update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'True')
+                else:
+                    update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'False')
 
