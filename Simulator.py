@@ -12,7 +12,7 @@ app = FastAPI()
 
 # Database connection function
 def get_db_connection():
-    conn = sqlite3.connect('Data copy.db')
+    conn = sqlite3.connect('Data.db')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -100,7 +100,7 @@ def simulate():
     conn.close()
 
 def run_scheduler():
-    schedule.every(1).minutes.do(simulate)
+    schedule.every(1).hours.do(simulate)
     while True:
         schedule.run_pending()
         time.sleep(1)
