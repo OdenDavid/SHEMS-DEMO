@@ -674,7 +674,7 @@ elif st.session_state.page == "dashboard":
         cursor.execute('''
             SELECT email FROM Homes
             WHERE HomeID = ?
-        ''', (st.session_state.homeid))
+        ''', (st.session_state.homeid,))
 
         email = cursor.fetchone()
 
