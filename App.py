@@ -14,6 +14,12 @@ import plotly.graph_objects as go
 
 import sqlite3
 
+from email_validator import validate_email, EmailNotValidError
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+
 # =========== Initialize SQL ==========
 conn = sqlite3.connect("Data.db") # db - database
 cursor = conn.cursor() # Cursor object
@@ -45,11 +51,130 @@ def restart():
     st.session_state.page = "home" # Go back to beginning
     st.rerun()
 
-def register_home(home_id, home_name, address, other):
+def sendmail(type, mail, homeid="", homename="", appliance_name="", appliance_type=""):
+
+    from_email = "odendavid0@gmail.com"
+    to_email = mail
+    password = "hhpr lmml ulhk qytb"
+    image_path = "../images/mail.png"
+
+    if type == "signup":
+        subject = "Welcome to SHEMS"
+        body = """
+                <html>
+                <body>
+                    <img src="cid:logo" alt="Logo">
+                    <h3>Welcome to SHEMS!</h3>
+                    <div>A warm welcome to SHEMS! We're thrilled to have you on board.</div>
+                    <div>Your registration is now complete, and we're excited to help you manage your home's energy usage efficiently. To get started, please note down your login details:</div>
+                    <ul>
+                    <li>
+                    <div>Home Name: <strong>{}</strong></div>
+                    </li>
+                    <li>
+                    <div>Home ID: <strong>{}</strong></div>
+                    </li>
+                    </ul>
+                    <div>These will be your login credentials, so please remember them for future reference.</div>
+                    <div>&nbsp;</div>
+                    <div>With SHEMS, you'll be able to monitor and control your home's energy consumption, receive personalized recommendations, and enjoy a more sustainable living experience.</div>
+                    <div>If you have any questions or need assistance, feel free to reply to this email or contact our support team.</div>
+                    <div>&nbsp;</div>
+                    <div>Thank you for choosing SHEMS!</div>
+                    <div>&nbsp;</div>
+                    <div>Best regards,<br />The SHEMS Team</div>
+                </body>
+                </html>""".format(homeid, homename) 
+    elif type == "add appliance":
+        subject = "SHEMS - Appliance Added"
+        body = """
+                <html>
+                <body>
+                    <img src="cid:logo" alt="Logo">
+                    <h3>Appliance Added</h3>
+                    <div>
+                    <div>A new appliance has been added to your home!</div>
+                    <div>Appliance Details:</div>
+                    <ul>
+                    <li>
+                    <div>Appliance Name: <strong>{}</strong></div>
+                    </li>
+                    <li>
+                    <div>Appliance Type: <strong>{}</strong></div>
+                    </li>
+                    <li>
+                    <div>Home ID: <strong>{}</strong></div>
+                    </li>
+                    </ul>
+                    </div>
+                    <div>
+                    <div>To view your appliance's energy usage and settings, simply log in to your SHEMS account and navigate to the "Appliance Control" section.</div>
+                    <div>If you have any questions or need assistance, feel free to reply to this email or contact our support team.</div>
+                    </div>
+                    <div>&nbsp;</div>
+                    <div>Best regards,<br />The SHEMS Team</div>
+                </body>
+                </html>""".format(appliance_name, appliance_type, homeid)
+    elif type == "appliance delete":
+        subject = "SHEMS - Appliance Deleted"
+        body = """
+                <html>
+                <body>
+                    <img src="cid:logo" alt="Logo">
+                    <h3>Appliance Deleted</h3>
+                    <div>
+                    <div>We've removed an appliance from your home's inventory.</div>
+                    <div>Appliance Details:</div>
+                    <ul>
+                    <li>
+                    <div>Appliance Name: <strong>{}</strong></div>
+                    </li>
+                    <li>
+                    <div>Appliance Type: <strong>{}</strong></div>
+                    </li>
+                    <li>
+                    <div>Home ID: <strong>{}</strong></div>
+                    </li>
+                    </ul>
+                    </div>
+                    <div>
+                    <div>This appliance is no longer monitored or controlled through your SHEMS account.</div>
+                    <div><strong>Note:</strong> Historical energy usage data for this appliance will still be available in your SHEMS account for reference.</div>
+                    </div>
+                    <div>Best regards,<br />The SHEMS Team</div>
+                </body>
+                </html>""".format(appliance_name, appliance_type, homeid)
+    elif type == "appliance condition":
+        pass
+
+    # Create a multipart message
+    msg = MIMEMultipart()
+    msg['Subject'] = subject
+    msg['From'] = from_email
+    msg['To'] = to_email
+
+    # Attach the HTML message
+    html = MIMEText(body, 'html')
+    msg.attach(html)
+
+    # Attach the image
+    image = MIMEImage(open(image_path, 'rb').read())
+    image.add_header('Content-ID', '<logo>')
+    image.add_header('Content-Disposition', 'inline')
+    msg.attach(image)
+
+    # Send the email using SMTP
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(from_email, password)
+    server.sendmail(from_email, to_email, msg.as_string())
+    server.quit()
+
+def register_home(home_id, home_name, email, address="", other=""):
     """Register a new home:
-        Collect Home name, address, homeid. Insert Into Database."""
+        Collect Home name, address, email, homeid. Insert Into Database."""
     
-    cursor.execute('''INSERT INTO Homes (HomeID, HomeName, Address, Others) VALUES (?, ?, ?, ?)''', (home_id, home_name, address, other))
+    cursor.execute('''INSERT INTO Homes (HomeID, HomeName, Address, Others, email) VALUES (?, ?, ?, ?, ?)''', (home_id, home_name, address, other, email))
     conn.commit()
 
 # ========= Get all Home Names and IDs ==========
@@ -66,7 +191,6 @@ def check_login(home_name, home_id):
         return True
     else:
         return False
-
 
 placeholder = st.empty() # Initialize a container widget to hold entire page contents
 
@@ -165,6 +289,19 @@ if st.session_state.page == "home":
 # =========================== Page 2: Login/Register ==================================
 elif st.session_state.page == "login":
     placeholder.empty()
+    def check_input(input_string):
+        """This will return True if the input string is not empty,
+        has a length of 2 or less, and contains only alphanumeric characters.
+        Otherwise, it will return False."""
+        return input_string and len(input_string) <= 2 and input_string.isalnum()
+    def check_email(email):
+        try:
+            emailinfo = validate_email(email, check_deliverability=False)
+            email = emailinfo.normalized
+            return email
+        except EmailNotValidError as e:
+            raise Exception(str(e))
+            
     with placeholder.container():
         c1, c2, c3 = st.columns([2,6,2], vertical_alignment="top")
         with c2:
@@ -172,17 +309,27 @@ elif st.session_state.page == "login":
             with t2:
                 st.subheader("Register a home")
                 home_name = st.text_input("Name", placeholder="Home Name")
+                email = st.text_input("Email Address", placeholder="name@email.com")
                 address = st.text_input("Address", placeholder="No 123, Ozumba Mbadiwe")
                 txt = st.text_area("Extra",placeholder="Something extra we don't need")
                 if st.button("Register",type="primary",use_container_width=True):
-                    home_id=str(random.randint(1000, 9999)) # Generate home ID
-                    try:
-                        register_home(home_id, home_name, address, txt)
-                        conn.close()
-                        st.success("{} registered successfully".format(home_name), icon="✅")
-                        goto_dashboard(home_id, home_name)
-                    except Exception as e:
-                        st.error("An Error occured while registering", icon="❌")
+                    if not check_input(home_name):
+                        st.error("Kindly check your home name and try again!", icon="❌")
+                    else:
+                        try:
+                            email = check_email(email)
+                            try:
+                                home_id=str(random.randint(1000, 9999)) # Generate home ID
+                                register_home(home_id, home_name, email, address, txt)
+                                st.success("{} registered successfully".format(home_name), icon="✅")
+                                goto_dashboard(home_id, home_name)
+                                
+                                # Send Success mail
+                                sendmail(type="signup",mail=email,homename=home_name,homeid=str(home_id))
+                            except Exception as e:
+                                st.error("An Error occured while registering", icon="❌")
+                        except Exception as e:
+                            st.error(e, icon="❌")
     
             with t1:
                 st.subheader("Login your home")
@@ -289,17 +436,19 @@ elif st.session_state.page == "dashboard":
             JOIN 
                 EnergyUsage EU ON A.ApplianceID = EU.ApplianceID
             WHERE 
-                EU.HomeID = ? 
+                A.HomeID = ? 
+                AND EU.HomeID = A.HomeID
             ORDER BY 
                 EU.DateTime DESC
         ''', (home_id,))
-
         appliances = cursor.fetchall()
+        
         if len(appliances) != 0:
             # Group the results by appliance and get the latest values
             appliance_data = {}
             for appliance in appliances:
                 name, description, condition, energy_consumed, current_output = appliance
+        
                 if name not in appliance_data:
                     appliance_data[name] = {
                         'Appliance Name': name,
@@ -317,15 +466,22 @@ elif st.session_state.page == "dashboard":
 
         # Get all unique appliances
         cursor.execute('''
-            SELECT DISTINCT
-                ApplianceID, 
+            SELECT DISTINCT 
                 ApplianceName, 
                 ApplianceType
             FROM 
                 Appliances
         ''')
-
         allappliances = cursor.fetchall()
+
+        # Get user email
+        cursor.execute('''
+            SELECT email
+            FROM Homes
+            WHERE HomeID=?
+        ''', (home_id))
+
+        email = cursor.fetchone()
 
         # Convert the results to a list of dictionaries
         appliance_list = [
@@ -347,6 +503,9 @@ elif st.session_state.page == "dashboard":
 
         if st.button("Add",type="primary",use_container_width=True):
             allhomeappliances = []
+
+            home_appliances = get_appliances(st.session_state.homeid)
+
             for appliance in home_appliances:
                 allhomeappliances.append(appliance['Appliance Name'])
 
@@ -360,11 +519,13 @@ elif st.session_state.page == "dashboard":
                 cursor.execute('''
                     INSERT INTO Appliances (ApplianceID, HomeID, ApplianceName, ApplianceType, StartValue, StopValue, ApplianceCondition)
                     VALUES (?, ?, ?, ?, ?, ?)
-                ''', (appliance_id, home_id, option.split(' - ')[0], option.split(' - ')[1], start_value, stop_value, 'True'))
+                ''', (appliance_id, home_id, option.split(' - ')[0], option.split(' - ')[1], start_value, stop_value, 'True'))   
                 conn.commit()
-                conn.close()
 
                 st.success("Successfully Added {}".format(option))
+
+                # Send success mail
+                sendmail(type="add appliance", mail=email, appliance_name=option.split(' - ')[0], appliance_type=option.split(' - ')[1], homeid=home_id)
 
     def update_appliance_condition(home_id, appliance_name, condition):
         cursor.execute('''
@@ -385,7 +546,7 @@ elif st.session_state.page == "dashboard":
 
     def get_energy_data(home_id, filter_by):
         """
-            This function takes three arguments:
+            This function takes 2 arguments:
                 home_id: the ID of the home to retrieve data for
                 filter_by: the filter to apply to the data (today, this month, or all time)
             
@@ -420,10 +581,10 @@ elif st.session_state.page == "dashboard":
         energy_data = cursor.fetchall()
 
         # Calculate totals and currents
-        total_energy_produced = sum(row[4] for row in energy_data)
-        current_energy_produced = energy_data[-1][4] if energy_data else 0
-        total_energy_consumed = sum(row[5] for row in energy_data)
-        current_energy_consumed = energy_data[-1][5] if energy_data else 0
+        total_energy_produced = sum(row[5] for row in energy_data)
+        current_energy_produced = energy_data[-1][5] if energy_data else 0
+        total_energy_consumed = sum(row[4] for row in energy_data)
+        current_energy_consumed = energy_data[-1][4] if energy_data else 0
         num_appliances = len(set(row[2] for row in energy_data))
 
         # Create dataframe for plotting
@@ -434,7 +595,7 @@ elif st.session_state.page == "dashboard":
         appliance_map = {1: 'Hisense Deep Freezer', 2: 'Scanfrost Refrigerator', 3: 'LG Air Conditioner'}
         df['Appliance'] = df['ApplianceID'].map(appliance_map)
 
-        # Rename columns for consistency
+        # Rename column
         df.rename(columns={'EnergyConsumed': 'Energy (kWh)'}, inplace=True)
 
         if filter_by == 'today':
@@ -447,10 +608,10 @@ elif st.session_state.page == "dashboard":
             x_axis = 'Day'
 
         return {
-            'total_energy_produced': float(total_energy_produced),
-            'current_energy_produced': float(current_energy_produced),
-            'total_energy_consumed': float(total_energy_consumed),
-            'current_energy_consumed': float(current_energy_consumed),
+            'total_energy_produced': round(float(total_energy_produced), 1),
+            'current_energy_produced': round(float(current_energy_produced), 2),
+            'total_energy_consumed': round(float(total_energy_consumed), 1),
+            'current_energy_consumed': round(float(current_energy_consumed), 2),
             'num_appliances': int(num_appliances),
             'df_plot': df_plot,
             'x_axis': x_axis
@@ -459,8 +620,8 @@ elif st.session_state.page == "dashboard":
     def show_dashboard(data): 
         # =============== Key Statistics =================
         st.markdown("<h3 style='font-size: 20px'>{}</h3>".format("Key Statistics"), unsafe_allow_html=True)
-        c1, c2, c3 = st.columns([3.3,3.3,3.3])
-        with c1:
+        cc1, cc2, cc3 = st.columns([3.3,3.3,3.3])
+        with cc1:
             plot_metric(
                 "Total Energy Produced",
                 data['total_energy_produced'],
@@ -470,7 +631,7 @@ elif st.session_state.page == "dashboard":
                 color_graph="rgba(0, 104, 201, 0.2)",
             )
             plot_gauge(data['current_energy_produced'], "#0068C9", " kWh", "Current Rate", 8)
-        with c2:
+        with cc2:
             plot_metric(
                 "Number of Appliances",
                 data['num_appliances'],
@@ -479,7 +640,7 @@ elif st.session_state.page == "dashboard":
                 show_graph=False,
                 color_graph="rgba(255, 242, 175, 20)",
             )
-        with c3:
+        with cc3:
             plot_metric(
                 "Total Energy Consumed",
                 data['total_energy_consumed'],
@@ -503,6 +664,80 @@ elif st.session_state.page == "dashboard":
         st.write("")
         st.write("")
     
+    def refresh():
+        dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
+        show_dashboard(data=dashboard_data_today)
+
+    def show_appliances():
+
+        # Get user email
+        cursor.execute('''
+            SELECT email
+            FROM Homes
+            WHERE HomeID=?
+        ''', (home_id))
+
+        email = cursor.fetchone()
+
+        # =========== Appliance Control ==================
+        c1, c2 = st.columns([8,1.2])
+        with c1:
+            st.markdown("<h3 style='font-size: 20px'>{}</h3>".format("Appliance Control"), unsafe_allow_html=True)
+        with c2:
+            if st.button(":heavy_plus_sign: Add Appliance",key='a'):
+                add_appliances()
+
+        home_appliances = get_appliances(st.session_state.homeid)
+        if home_appliances == None:
+            pass
+        else:
+            N_cards_per_row = 3
+
+            for n_row, appliance in enumerate(home_appliances):
+                i = n_row % N_cards_per_row
+                if i == 0:
+                    st.write("---")
+                    cols = st.columns(N_cards_per_row, gap="large")
+                
+                with cols[n_row % N_cards_per_row]:
+                    # ==== Card ======
+                    st.markdown(f"**{appliance['Appliance Name']}: {appliance['Appliance Description']}**", unsafe_allow_html=True)
+                    st.write(f"**Current Energy Consumption:** {str(round(appliance['Current Energy Consumption (kWh)'], 1))} kWh")
+                    st.write(f"**Current Output:** {str(math.floor(appliance['Current Output (°C)']))} °C")
+                    
+                    c1, c2 = st.columns([6,4])
+                    with c1:
+                        current_condition = get_appliance_condition(st.session_state.homeid, appliance['Appliance Name'])
+                        if current_condition == 'True':
+                            value = True
+                        else:
+                            value = False
+
+                        on = st.toggle("Off/On", value=value, key=n_row)
+                        if on:
+                            update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'True')
+                        else:
+                            update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'False')
+                    with c2:
+                        if st.button("🗑️Delete",key=n_row+3):
+                            # Delete the appliance from the Appliances table
+                            try:
+                                cursor.execute('''
+                                    DELETE FROM Appliances
+                                    WHERE HomeID = ? AND ApplianceName = ?
+                                ''', (st.session_state.homeid, appliance['Appliance Name']))
+                                conn.commit()
+                                st.toast(appliance['Appliance Name']+ ' Deleted!', icon="✅")
+                                
+                                # Send success mail
+                                sendmail(type="appliance delete", mail=email, appliance_name=appliance['Appliance Name'], appliance_type=appliance['Appliance Description'], homeid=st.session_state.homeid)
+                            except:
+                                st.toast('An Error occured: Appliance not found!', icon="❌")
+                            refresh()
+
+    def logut():
+        pass
+    
     # =========== Header ==============    
     c1, c2 = st.columns([4,7], vertical_alignment="center")
     with c1:
@@ -511,11 +746,12 @@ elif st.session_state.page == "dashboard":
         c1, c2 = st.columns([7,1.5], vertical_alignment="center")
         with c2:
             if st.button(":leftwards_arrow_with_hook: Refresh"):
-                pass
+                refresh()
     # ========== Dashboard Data ==========
     dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
     dashboard_data_this_month = get_energy_data(home_id=st.session_state.homeid,filter_by='this_month')
     dashboard_data_all_time = get_energy_data(home_id=st.session_state.homeid,filter_by='all_time')
+    
     # =========== Filter Row ==============   
     t1, t2, t3 = st.tabs(["Today", "This Month", "All Time"])
     with t1:
@@ -524,37 +760,11 @@ elif st.session_state.page == "dashboard":
         show_dashboard(data=dashboard_data_this_month)
     with t3:
         show_dashboard(data=dashboard_data_all_time)
+
+    show_appliances()
+
     
-    # =========== Appliance Control ==================
-    c1, c2 = st.columns([8,1.2])
-    with c1:
-        st.markdown("<h3 style='font-size: 20px'>{}</h3>".format("Appliance Control"), unsafe_allow_html=True)
-    with c2:
-        if st.button(":heavy_plus_sign: Add Appliance",key='a'):
-            add_appliances()
+    
+    
 
-    home_appliances = get_appliances(st.session_state.homeid)
-    if home_appliances == None:
-        pass
-    else:
-        N_cards_per_row = 3
-
-        for n_row, appliance in enumerate(home_appliances):
-            i = n_row % N_cards_per_row
-            if i == 0:
-                st.write("---")
-                cols = st.columns(N_cards_per_row, gap="large")
-            
-            with cols[n_row % N_cards_per_row]:
-                # ==== Card ======
-                st.markdown(f"**{appliance['Appliance Name']}: {appliance['Appliance Description']}**", unsafe_allow_html=True)
-                st.write(f"**Current Energy Consumption:** {str(round(appliance['Current Energy Consumption (kWh)'], 1))} kWh")
-                st.write(f"**Current Output:** {str(math.floor(appliance['Current Output (°C)']))} °C")
-                
-                initial_condition = get_appliance_condition(st.session_state.homeid, appliance['Appliance Name'])
-                print(initial_condition, appliance['Appliance Name'], st.session_state.homeid)
-                if st.toggle("Off/On", value=bool(), key=n_row):
-                    update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'True')
-                else:
-                    update_appliance_condition(st.session_state.homeid, appliance['Appliance Name'], 'False')
 
