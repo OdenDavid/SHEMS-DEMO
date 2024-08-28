@@ -3,3 +3,4 @@ plotly
 schedule
 email-validator
 fastapi
+uvicorn

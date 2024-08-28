@@ -4,6 +4,7 @@ Tables:
         -HomeName
         - Address
         - Others
+        - email
     
     Appliances
         - ApplianceID (primary key)
@@ -27,4 +28,28 @@ Tables:
 Top Appliances:
     - Hisense Deep Freezer (H170CF 142L Chest Freezer): Consumption 0.664 kwh (https://hisenseshop.co.tz/product/hisense-h170cf-142l-chest-freezer/)
     - Scanfrost Refrigerator (): Consumption 0.879kwh/24h ()
-    - LG Air Conditioner (S4-Q12JA3QG 1.5HP): Consumption (3,517W) and Cooling Capacity (12,000Btu/h, Max: 13,000Btu) EER (3.01W/W 10.26Btu/h.W) (https://www.lg.com/africa/residential-air-conditioners/lg-S4-Q12JA3QG)
+    - LG Air Conditioner (S4-Q12JA3QG 1.5HP): EER (10.26Btu/h.W) (https://www.lg.com/africa/residential-air-conditioners/lg-S4-Q12JA3QG)
+        EER in Btu/h.W (Btu per hour per Watt): An EER of 10.26 Btu/h.W means that for every watt of electrical power consumed,
+        the air conditioner provides 10.26 Btu of cooling per hour.
+        If : 0.005 kWh is equivalent to 5 W. That means 0.005 kWh of consumed energy would produce 5 x 10.26 = 513 Btu = 285 degree celcius 
+
+
+Simulator
+
+* Check and select all appliances in the appliance table
+* For each appliance, If appliance is on(True), select the last observation in the table energyusage where homeID and applianceID matches
+* Insert a new observation in energyusage. homeID, applianceID, Current Datetime, EnergyConsumed, EnergyProduced, CurrentOutput
+* If appliance is off(False), select the last observation in the table energyusage where homeID and applianceID matches
+* Insert a new observation in energyusage. EnergyUsageID, homeID, applianceID, Datetime, EnergyConsumed, EnergyProduced, CurrentOutput
+
+Things to note: You will insert a new observation based on the values from the last observation fetched.
+If on:
+    For Air Conditioner i.e appliance id 3: A steady consumption range of 0.0007(kwh) - 0.001(kWh) and current output range of 4.0 - 5.7 (degree celcius) respectively, the value of current output will be added to the previous output and be inserted as current output. 
+    For Freezer i.e appliance 1: A steady consumption 0.6(kWh) - 0.8(kWh) and current output range 2.0 - 4.7 (degree celcius) respectively, the value of current output will be added to the previous output and be inserted as current output.
+    For Refrigerator i.e appliance 2: A steady consumption 0.02(kWh) - 0.04(kWh) and current output range 5.0 - 6.0 (degree celcius) respectively, the value of current output will be added to the previous output and be inserted as current output.
+If off:
+    For Air Conditioner i.e appliance id 3: A steady consumption range of 0(kwh) - 0(kWh) and current output range of 4.0 - 5.7 (degree celcius) respectively, the value of current output will be deducted from the previous output and be inserted as current output. 
+    For Freezer i.e appliance 1: A steady consumption 0(kWh) - 0(kWh) and current output range 2.0 - 4.7 (degree celcius) respectively, the value of current output will be deducted from the previous output and be inserted as current output.
+    For Refrigerator i.e appliance 2: A steady consumption 0(kWh) - 0(kWh) and current output range 5.0 - 6.0 (degree celcius) respectively, the value of current output will be deducted from the previous output and be inserted as current output.
+
+Energy produced should be the sum of all energy consumed across all devices for each hour for a specific home.
