@@ -12,7 +12,7 @@ app = FastAPI()
 
 # Database connection function
 def get_db_connection():
-    conn = sqlite3.connect('Data.db')
+    conn = sqlite3.connect('Data copy.db')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -48,6 +48,18 @@ def simulate():
         ''', (home_id, appliance_id))
         last_observation = cursor.fetchone()
         current_temperature = last_observation['CurrentOutput']
+
+        # ==== Auto On/Off ======
+        # Check if the current temperature falls outside the threshold range
+        if (current_temperature < stop_value and not appliance_condition) or (current_temperature > start_value and appliance_condition):
+            # Update the appliance condition
+            new_condition = not appliance_condition
+            
+            cursor.execute('''
+                UPDATE Appliances
+                SET ApplianceCondition = ?
+                WHERE HomeID = ? AND ApplianceID = ?
+            ''', (str(new_condition), home_id, appliance_id))
         
         # If the appliance is on
         if appliance_condition:
@@ -83,17 +95,6 @@ def simulate():
             INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (home_id, appliance_id, datetime.now(), energy_consumed, energy_produced, current_output))
-
-        # ==== Auto On/Off ======
-        # Check if the current temperature falls outside the threshold range
-        if (current_temperature < start_value and appliance_condition) or (current_temperature > stop_value and not appliance_condition):
-            # Update the appliance condition
-            new_condition = current_temperature >= start_value and current_temperature <= stop_value
-            cursor.execute('''
-                UPDATE Appliances
-                SET ApplianceCondition = ?
-                WHERE HomeID = ? AND ApplianceID = ?
-            ''', (new_condition, home_id, appliance_id))
 
     conn.commit()
     conn.close()
