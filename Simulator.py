@@ -7,6 +7,10 @@ from datetime import datetime
 import schedule
 import time
 import threading
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -14,6 +18,7 @@ app = FastAPI()
 def get_db_connection():
     conn = sqlite3.connect('Data.db')
     conn.row_factory = sqlite3.Row
+    logging.info("DB connected")
     return conn
 
 # Initialize energy produced to 0: For first runs
@@ -24,12 +29,15 @@ def simulate():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    logging.info("Running simulate function")
     # Get all appliances
     cursor.execute('''
         SELECT ApplianceID, HomeID, ApplianceCondition, StartValue, StopValue
         FROM Appliances
     ''')
     appliances = cursor.fetchall()
+
+    logging.info(f"Fetched {len(appliances)} appliances")
 
     # Loop through each appliance
     for appliance in appliances:
@@ -95,9 +103,11 @@ def simulate():
             INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (home_id, appliance_id, datetime.now(), energy_consumed, energy_produced, current_output))
+        logging.info(f"Inserted new observation for ApplianceID {appliance_id} in HomeID {home_id}")
 
     conn.commit()
     conn.close()
+    logging.info("Simulation completed and database updated.")
 
 def run_scheduler():
     schedule.every(1).hours.do(simulate)
