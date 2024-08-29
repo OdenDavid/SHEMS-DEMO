@@ -1,4 +1,4 @@
-# To run the application, you would use: uvicorn your_script_name:app --reload
+# To run the application, you would use: uvicorn Simulator:app --host 0.0.0.0 --port 8080 --reload
 
 from fastapi import FastAPI, HTTPException
 import sqlite3
@@ -113,7 +113,7 @@ def simulate():
     logging.info("Simulation completed and database updated.")
 
 def run_scheduler():
-    schedule.every(1).hours.do(simulate)
+    schedule.every(1).minutes.do(simulate)
     while True:
         schedule.run_pending()
         time.sleep(1)
