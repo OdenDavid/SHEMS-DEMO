@@ -110,7 +110,7 @@ def simulate():
     logging.info("Simulation completed and database updated.")
 
 def run_scheduler():
-    schedule.every(1).hours.do(simulate)
+    schedule.every(1).minutes.do(simulate)
     while True:
         schedule.run_pending()
         time.sleep(1)
