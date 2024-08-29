@@ -684,7 +684,7 @@ elif st.session_state.page == "dashboard":
             st.markdown("<h3 style='font-size: 20px'>{}</h3>".format("Appliance Control"), unsafe_allow_html=True)
         with c2:
             if st.button(":heavy_plus_sign: Add Appliance",key='a'):
-                add_appliances()
+                add_appliances(home_id=st.session_state.home_id)
 
         home_appliances = get_appliances(st.session_state.homeid)
         if home_appliances == None:
