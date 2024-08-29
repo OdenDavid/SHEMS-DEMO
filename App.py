@@ -36,6 +36,8 @@ if "home_name" not in st.session_state:
     st.session_state.home_name = "Default"
 if "data_to_show" in st.session_state:
     st.session_state.data_to_show = {}
+if "refresh_trigger" not in st.session_state:
+    st.session_state.refresh_trigger = False
 
 def goto_login():
     st.session_state.page = "login"  # Go to login page
@@ -479,7 +481,7 @@ elif st.session_state.page == "dashboard":
             SELECT email
             FROM Homes
             WHERE HomeID=?
-        ''', (home_id))
+        ''', (home_id,))
 
         email = cursor.fetchone()
 
@@ -521,6 +523,12 @@ elif st.session_state.page == "dashboard":
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (appliance_id, home_id, option.split(' - ')[0], option.split(' - ')[1], start_value, stop_value, 'True'))   
                 conn.commit()
+
+                # Add initial energy usage
+                cursor.execute('''
+                    INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (home_id, appliance_id, datetime.now(), 0.0, 0.0, 0.0))
 
                 st.success("Successfully Added {}".format(option))
 
@@ -665,8 +673,10 @@ elif st.session_state.page == "dashboard":
         st.write("")
     
     def refresh():
-        dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
+        pass
+        """dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
         show_dashboard(data=dashboard_data_today)
+        show_appliances()"""
 
     def show_appliances():
 
@@ -684,7 +694,7 @@ elif st.session_state.page == "dashboard":
             st.markdown("<h3 style='font-size: 20px'>{}</h3>".format("Appliance Control"), unsafe_allow_html=True)
         with c2:
             if st.button(":heavy_plus_sign: Add Appliance",key='a'):
-                add_appliances(home_id=st.session_state.home_id)
+                add_appliances(home_id=st.session_state.homeid)
 
         home_appliances = get_appliances(st.session_state.homeid)
         if home_appliances == None:
@@ -728,11 +738,14 @@ elif st.session_state.page == "dashboard":
                                 conn.commit()
                                 st.toast(appliance['Appliance Name']+ ' Deleted!', icon="✅")
                                 
+                                # refresh
+                                st.session_state.refresh_trigger = True
+                                
                                 # Send success mail
                                 sendmail(type="appliance delete", mail=email, appliance_name=appliance['Appliance Name'], appliance_type=appliance['Appliance Description'], homeid=st.session_state.homeid)
                             except:
                                 st.toast('An Error occured: Appliance not found!', icon="❌")
-                            refresh()
+                            
 
     def logut():
         pass
@@ -745,25 +758,23 @@ elif st.session_state.page == "dashboard":
         c1, c2 = st.columns([7,1.5], vertical_alignment="center")
         with c2:
             if st.button(":leftwards_arrow_with_hook: Refresh"):
-                refresh()
+                st.session_state.refresh_trigger = True
     # ========== Dashboard Data ==========
-    dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
-    dashboard_data_this_month = get_energy_data(home_id=st.session_state.homeid,filter_by='this_month')
-    dashboard_data_all_time = get_energy_data(home_id=st.session_state.homeid,filter_by='all_time')
+    if st.session_state.refresh_trigger or "dashboard_data_today" not in st.session_state:
+        st.session_state.dashboard_data_today = get_energy_data(home_id=st.session_state.homeid, filter_by='today')
+        st.session_state.dashboard_data_this_month = get_energy_data(home_id=st.session_state.homeid, filter_by='this_month')
+        st.session_state.dashboard_data_all_time = get_energy_data(home_id=st.session_state.homeid, filter_by='all_time')
+        st.session_state.refresh_trigger = False
     
     # =========== Filter Row ==============   
     t1, t2, t3 = st.tabs(["Today", "This Month", "All Time"])
     with t1:
-        show_dashboard(data=dashboard_data_today)
+        show_dashboard(data=st.session_state.dashboard_data_today)
     with t2:
-        show_dashboard(data=dashboard_data_this_month)
+        show_dashboard(data=st.session_state.dashboard_data_this_month)
     with t3:
-        show_dashboard(data=dashboard_data_all_time)
+        show_dashboard(data=st.session_state.dashboard_data_all_time)
 
     show_appliances()
-
-    
-    
-    
 
 
