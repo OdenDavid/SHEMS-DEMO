@@ -55,7 +55,10 @@ def simulate():
             LIMIT 1
         ''', (home_id, appliance_id))
         last_observation = cursor.fetchone()
-        current_temperature = last_observation['CurrentOutput']
+        try:
+            current_temperature = last_observation['CurrentOutput']
+        except TypeError:
+            current_temperature = 0.0
 
         # ==== Auto On/Off ======
         # Check if the current temperature falls outside the threshold range
