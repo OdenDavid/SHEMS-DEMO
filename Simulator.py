@@ -58,7 +58,7 @@ def simulate():
         try:
             current_temperature = last_observation['CurrentOutput']
         except TypeError:
-            current_temperature = 0.0
+            current_temperature = 0.0 # If the appliance is new
 
         # ==== Auto On/Off ======
         # Check if the current temperature falls outside the threshold range
@@ -77,26 +77,26 @@ def simulate():
             # Generate random energy consumed and current output values based on the appliance type
             if appliance_id == 1:  # Freezer
                 energy_consumed = random.uniform(0.6, 0.8)
-                current_output = last_observation['CurrentOutput'] + random.uniform(2.0, 4.7)
+                current_output = current_temperature + random.uniform(2.0, 4.7)
             elif appliance_id == 2:  # Refrigerator
                 energy_consumed = random.uniform(0.02, 0.04)
-                current_output = last_observation['CurrentOutput'] + random.uniform(5.0, 6.0)
+                current_output = current_temperature + random.uniform(5.0, 6.0)
             elif appliance_id == 3:  # Air Conditioner
                 energy_consumed = random.uniform(0.0007, 0.001)
-                current_output = last_observation['CurrentOutput'] + random.uniform(4.0, 5.7)
+                current_output = current_temperature + random.uniform(4.0, 5.7)
 
         # If the appliance is off
         else:
             # Generate random energy consumed and current output values based on the appliance type
             if appliance_id == 1:  # Freezer
                 energy_consumed = random.uniform(0, 0)
-                current_output = last_observation['CurrentOutput'] - random.uniform(2.0, 4.7)
+                current_output = current_temperature - random.uniform(2.0, 4.7)
             elif appliance_id == 2:  # Refrigerator
                 energy_consumed = random.uniform(0, 0)
-                current_output = last_observation['CurrentOutput'] - random.uniform(5.0, 6.0)
+                current_output = current_temperature - random.uniform(5.0, 6.0)
             elif appliance_id == 3:  # Air Conditioner
                 energy_consumed = random.uniform(0, 0)
-                current_output = last_observation['CurrentOutput'] - random.uniform(4.0, 5.7)
+                current_output = current_temperature - random.uniform(4.0, 5.7)
 
         # Calculate the energy produced
         energy_produced += energy_consumed
