@@ -7,12 +7,14 @@ import streamlit as st
 import random
 from datetime import datetime
 import math
+import os
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import sqlite3
+import psycopg2
+from urllib.parse import urlparse
 
 from email_validator import validate_email, EmailNotValidError
 import smtplib
@@ -20,9 +22,32 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 
-# =========== Initialize SQL ==========
-conn = sqlite3.connect("Data.db") # db - database
-cursor = conn.cursor() # Cursor object
+# =========== Establish Connection ==========
+try:
+    DATABASE_URL = "postgresql://shems_data_user:O7o0GFLAxWDdn7cO0O81hLtht7qDlIM5@dpg-cr8orodsvqrc739dkr7g-a.oregon-postgres.render.com/shems_data"
+    #os.getenv('DATABASE_URL')
+
+    # Parse the URL
+    result = urlparse(DATABASE_URL)
+
+    # Extract the components
+    username = result.username
+    password = result.password
+    database = result.path[1:]  # remove the leading '/'
+    hostname = result.hostname
+    port = result.port
+
+    # Connect to the PostgreSQL database
+    conn = psycopg2.connect(
+        dbname=database,
+        user=username,
+        password=password,
+        host=hostname,
+        port=port
+    )
+    cursor = conn.cursor() # Cursor object
+except psycopg2.OperationalError as e:
+    st.error(body=f"Error: {e}", icon="🚨")
 
 # ============= PAGE SETUP ============
 st.set_page_config(page_title="SHEMS", page_icon="♻️", layout="wide")
@@ -55,10 +80,12 @@ def restart():
 
 def sendmail(type, mail, homeid="", homename="", appliance_name="", appliance_type=""):
 
+    print(type,mail,homeid,homename, appliance_name, appliance_type)
+
     from_email = "odendavid0@gmail.com"
     to_email = mail
     password = "hhpr lmml ulhk qytb"
-    image_path = "../images/mail.png"
+    image_path = "images/mail.png"
 
     if type == "signup":
         subject = "Welcome to SHEMS"
@@ -172,11 +199,12 @@ def sendmail(type, mail, homeid="", homename="", appliance_name="", appliance_ty
     server.sendmail(from_email, to_email, msg.as_string())
     server.quit()
 
+
 def register_home(home_id, home_name, email, address="", other=""):
     """Register a new home:
-        Collect Home name, address, email, homeid. Insert Into Database."""
+        Collect Home name, address, email, homeid. Insert Database."""
     
-    cursor.execute('''INSERT INTO Homes (HomeID, HomeName, Address, Others, email) VALUES (?, ?, ?, ?, ?)''', (home_id, home_name, address, other, email))
+    cursor.execute(f'''INSERT INTO Homes (HomeID, HomeName, Address, Others, email) VALUES ({home_id}, '{home_name}', '{address}', '{other}', '{email}');''')
     conn.commit()
 
 # ========= Get all Home Names and IDs ==========
@@ -184,10 +212,9 @@ def check_login(home_name, home_id):
     """Login an existing home:
         Collect Home name, homeid. Check if both are in database"""
     
-    cursor.execute('''
+    cursor.execute(f'''
         SELECT * FROM Homes
-        WHERE HomeID = ? AND HomeName = ?
-    ''', (home_id, home_name))
+        WHERE HomeID = {home_id} AND HomeName = '{home_name}';''')
     result = cursor.fetchone()
     if result:
         return True
@@ -195,11 +222,6 @@ def check_login(home_name, home_id):
         return False
 
 placeholder = st.empty() # Initialize a container widget to hold entire page contents
-
-# ===== Open new window ========
-def open_page():
-    pass
-    #webbrowser.open(where)
 
 # ================= Page 1: Home Page ==================
 if st.session_state.page == "home":
@@ -315,7 +337,7 @@ elif st.session_state.page == "login":
                 address = st.text_input("Address", placeholder="No 123, Ozumba Mbadiwe")
                 txt = st.text_area("Extra",placeholder="Something extra we don't need")
                 if st.button("Register",type="primary",use_container_width=True):
-                    if not check_input(home_name):
+                    if check_input(home_name):
                         st.error("Kindly check your home name and try again!", icon="❌")
                     else:
                         try:
@@ -323,11 +345,13 @@ elif st.session_state.page == "login":
                             try:
                                 home_id=str(random.randint(1000, 9999)) # Generate home ID
                                 register_home(home_id, home_name, email, address, txt)
-                                st.success("{} registered successfully".format(home_name), icon="✅")
-                                goto_dashboard(home_id, home_name)
                                 
                                 # Send Success mail
                                 sendmail(type="signup",mail=email,homename=home_name,homeid=str(home_id))
+                                st.success("{} registered successfully".format(home_name), icon="✅")
+                                
+                                goto_dashboard(home_id, home_name)
+
                             except Exception as e:
                                 st.error("An Error occured while registering", icon="❌")
                         except Exception as e:
@@ -426,7 +450,7 @@ elif st.session_state.page == "dashboard":
     def get_appliances(home_id):
         """"""
         # Get the latest energy usage data for each appliance
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT 
                 A.ApplianceName, 
                 A.ApplianceType,
@@ -438,11 +462,11 @@ elif st.session_state.page == "dashboard":
             JOIN 
                 EnergyUsage EU ON A.ApplianceID = EU.ApplianceID
             WHERE 
-                A.HomeID = ? 
+                A.HomeID = {home_id}
                 AND EU.HomeID = A.HomeID
             ORDER BY 
-                EU.DateTime DESC
-        ''', (home_id,))
+                EU.DateTime DESC;
+        ''')
         appliances = cursor.fetchall()
         
         if len(appliances) != 0:
@@ -470,29 +494,30 @@ elif st.session_state.page == "dashboard":
         cursor.execute('''
             SELECT DISTINCT 
                 ApplianceName, 
-                ApplianceType
+                ApplianceType,
+                ApplianceID
             FROM 
-                Appliances
+                Appliances;
         ''')
         allappliances = cursor.fetchall()
 
         # Get user email
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT email
             FROM Homes
-            WHERE HomeID=?
-        ''', (home_id,))
+            WHERE HomeID={home_id};
+        ''')
 
-        email = cursor.fetchone()
+        email = cursor.fetchone()[0]
 
         # Convert the results to a list of dictionaries
         appliance_list = [
             name + ' - ' + description
-            for name, description in allappliances
+            for name, description, id_ in allappliances
         ]
 
         # Create a dictionary to map appliance names to IDs
-        appliance_ids = {appliance[1]: appliance[0] for appliance in allappliances}
+        appliance_ids = {appliance[0]: appliance[2] for appliance in allappliances}
 
         option = st.selectbox(
             "Add an appliance to your home",
@@ -508,47 +533,53 @@ elif st.session_state.page == "dashboard":
 
             home_appliances = get_appliances(st.session_state.homeid)
 
-            for appliance in home_appliances:
-                allhomeappliances.append(appliance['Appliance Name'])
+            if home_appliances == None: # A new home
+                pass
+            else:
+                for appliance in home_appliances:
+                    allhomeappliances.append(appliance['Appliance Name'])
 
             if option.split(' - ')[0] in allhomeappliances:
                 st.error('{} already added to {}'.format(option, st.session_state.home_name), icon="🚨")
             else:
                 # Get the ApplianceID from the dictionary
+
                 appliance_id = appliance_ids[option.split(' - ')[0]]
                 
                 # Add appliance to table
-                cursor.execute('''
+                cursor.execute(f'''
                     INSERT INTO Appliances (ApplianceID, HomeID, ApplianceName, ApplianceType, StartValue, StopValue, ApplianceCondition)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (appliance_id, home_id, option.split(' - ')[0], option.split(' - ')[1], start_value, stop_value, 'True'))   
-                conn.commit()
+                    VALUES ({appliance_id}, {home_id}, '{option.split(' - ')[0]}', '{option.split(' - ')[1]}', {start_value}, {stop_value}, '{'True'}');
+                ''')   
 
                 # Add initial energy usage
-                cursor.execute('''
+                cursor.execute(f'''
                     INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (home_id, appliance_id, datetime.now(), 0.0, 0.0, 0.0))
+                    VALUES ({home_id}, {appliance_id}, '{datetime.now()}', {0.0}, {0.0}, {0.0});
+                ''')
 
-                st.success("Successfully Added {}".format(option))
+                conn.commit()
+                conn.close()
 
                 # Send success mail
                 sendmail(type="add appliance", mail=email, appliance_name=option.split(' - ')[0], appliance_type=option.split(' - ')[1], homeid=home_id)
+                
+                st.success("Successfully Added {}".format(option))
 
     def update_appliance_condition(home_id, appliance_name, condition):
-        cursor.execute('''
+        cursor.execute(f'''
             UPDATE Appliances
-            SET ApplianceCondition = ?
-            WHERE HomeID = ? AND ApplianceName = ?
-        ''', (condition, home_id, appliance_name))
+            SET ApplianceCondition = '{condition}'
+            WHERE HomeID = {home_id} AND ApplianceName = '{appliance_name}';
+        ''')
         conn.commit()
 
     def get_appliance_condition(home_id, appliance_name):
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT ApplianceCondition
             FROM Appliances
-            WHERE HomeID = ? AND ApplianceName = ?
-        ''', (home_id, appliance_name))
+            WHERE HomeID = {home_id} AND ApplianceName = '{appliance_name}';
+        ''')
         condition = cursor.fetchone()[0]
         return condition
 
@@ -570,21 +601,21 @@ elif st.session_state.page == "dashboard":
         # Filter by date
         if filter_by == 'today':
             start_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT * FROM EnergyUsage
-                WHERE HomeID = ? AND DateTime >= ?
-            ''', (home_id, start_date))
+                WHERE HomeID = {home_id} AND DateTime >= '{start_date}';
+            ''')
         elif filter_by == 'this_month':
             start_date = datetime.today().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT * FROM EnergyUsage
-                WHERE HomeID = ? AND DateTime >= ?
-            ''', (home_id, start_date))
+                WHERE HomeID = {home_id} AND DateTime >= '{start_date}';
+            ''')
         elif filter_by == 'all_time':
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT * FROM EnergyUsage
-                WHERE HomeID = ?
-            ''', (home_id,))
+                WHERE HomeID = {home_id};
+            ''')
 
         energy_data = cursor.fetchall()
 
@@ -671,22 +702,16 @@ elif st.session_state.page == "dashboard":
 
         st.write("")
         st.write("")
-    
-    def refresh():
-        pass
-        """dashboard_data_today = get_energy_data(home_id=st.session_state.homeid,filter_by='today')
-        show_dashboard(data=dashboard_data_today)
-        show_appliances()"""
 
     def show_appliances():
 
         # Get user email
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT email FROM Homes
-            WHERE HomeID = ?
-        ''', (st.session_state.homeid,))
+            WHERE HomeID = {st.session_state.homeid};
+        ''')
 
-        email = cursor.fetchone()
+        email = cursor.fetchone()[0]
 
         # =========== Appliance Control ==================
         c1, c2 = st.columns([8,1.2])
@@ -731,10 +756,10 @@ elif st.session_state.page == "dashboard":
                         if st.button("🗑️Delete",key=n_row+3):
                             # Delete the appliance from the Appliances table
                             try:
-                                cursor.execute('''
+                                cursor.execute(f'''
                                     DELETE FROM Appliances
-                                    WHERE HomeID = ? AND ApplianceName = ?
-                                ''', (st.session_state.homeid, appliance['Appliance Name']))
+                                    WHERE HomeID = {st.session_state.homeid} AND ApplianceName = '{appliance['Appliance Name']}';
+                                ''')
                                 conn.commit()
                                 st.toast(appliance['Appliance Name']+ ' Deleted!', icon="✅")
                                 
@@ -746,7 +771,6 @@ elif st.session_state.page == "dashboard":
                             except:
                                 st.toast('An Error occured: Appliance not found!', icon="❌")
                             
-
     def logut():
         pass
     
@@ -755,10 +779,13 @@ elif st.session_state.page == "dashboard":
     with c1:
         st.markdown("<div><h1 style='font-size: 24px'>{} |</h1><p style='font-size: 13px'>{}</p></div>".format(st.session_state.home_name, st.session_state.homeid), unsafe_allow_html=True)
     with c2:
-        c1, c2 = st.columns([7,1.5], vertical_alignment="center")
+        c1, c2, c3 = st.columns([6,2,2], vertical_alignment="center")
         with c2:
-            if st.button(":leftwards_arrow_with_hook: Refresh"):
+            if st.button("🔄 Refresh"):
                 st.session_state.refresh_trigger = True
+        with c3:
+            if st.button(":leftwards_arrow_with_hook: Logout"):
+                goto_login()
     # ========== Dashboard Data ==========
     if st.session_state.refresh_trigger or "dashboard_data_today" not in st.session_state:
         st.session_state.dashboard_data_today = get_energy_data(home_id=st.session_state.homeid, filter_by='today')
@@ -776,5 +803,3 @@ elif st.session_state.page == "dashboard":
         show_dashboard(data=st.session_state.dashboard_data_all_time)
 
     show_appliances()
-
-
