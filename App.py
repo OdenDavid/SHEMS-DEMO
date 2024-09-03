@@ -24,8 +24,7 @@ from email.mime.multipart import MIMEMultipart
 
 # =========== Establish Connection ==========
 try:
-    DATABASE_URL = "postgresql://shems_data_user:O7o0GFLAxWDdn7cO0O81hLtht7qDlIM5@dpg-cr8orodsvqrc739dkr7g-a.oregon-postgres.render.com/shems_data"
-    #os.getenv('DATABASE_URL')
+    DATABASE_URL = os.getenv('DATABASE_URL')
 
     # Parse the URL
     result = urlparse(DATABASE_URL)
@@ -552,10 +551,12 @@ elif st.session_state.page == "dashboard":
                     VALUES ({appliance_id}, {home_id}, '{option.split(' - ')[0]}', '{option.split(' - ')[1]}', {start_value}, {stop_value}, '{'True'}');
                 ''')   
 
+                now = datetime.now()
+                now = now.strftime("%Y-%m-%d %H:%M:%S")
                 # Add initial energy usage
                 cursor.execute(f'''
                     INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
-                    VALUES ({home_id}, {appliance_id}, '{datetime.now()}', {0.0}, {0.0}, {0.0});
+                    VALUES ({home_id}, {appliance_id}, '{now}', {0.0}, {0.0}, {0.0});
                 ''')
 
                 conn.commit()
