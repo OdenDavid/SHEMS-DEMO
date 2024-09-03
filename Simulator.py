@@ -131,7 +131,7 @@ def simulate():
         # Insert a new observation into the energy usage table
         cursor.execute(f'''
             INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
-            VALUES ({home_id}, {appliance_id}, '{str(datetime.now())}', {energy_consumed}, {energy_produced}, {current_output});
+            VALUES ({home_id}, {appliance_id}, '{now}', {energy_consumed}, {energy_produced}, {current_output});
         ''')
         logging.info(f"Inserted new observation for ApplianceID {appliance_id} in HomeID {home_id}")
 
@@ -140,7 +140,7 @@ def simulate():
     logging.info("Simulation completed and database updated.")
 
 def run_scheduler():
-    schedule.every(1).minutes.do(simulate)
+    schedule.every(1).hours.do(simulate)
     while True:
         schedule.run_pending()
         time.sleep(1)
