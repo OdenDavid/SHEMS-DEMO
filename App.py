@@ -24,7 +24,8 @@ from email.mime.multipart import MIMEMultipart
 
 # =========== Establish Connection ==========
 try:
-    DATABASE_URL = os.getenv('DATABASE_URL')
+    DATABASE_URL = "postgresql://shems_data_user:O7o0GFLAxWDdn7cO0O81hLtht7qDlIM5@dpg-cr8orodsvqrc739dkr7g-a.oregon-postgres.render.com/shems_data"
+    #os.getenv('DATABASE_URL')
 
     # Parse the URL
     result = urlparse(DATABASE_URL)
@@ -112,7 +113,7 @@ def sendmail(type, mail, homeid="", homename="", appliance_name="", appliance_ty
                     <div>&nbsp;</div>
                     <div>Best regards,<br />The SHEMS Team</div>
                 </body>
-                </html>""".format(homeid, homename) 
+                </html>""".format(homename, homeid) 
     elif type == "add appliance":
         subject = "SHEMS - Appliance Added"
         body = """
