@@ -24,8 +24,7 @@ from email.mime.multipart import MIMEMultipart
 
 # =========== Establish Connection ==========
 try:
-    DATABASE_URL = "postgresql://shems_data_user:O7o0GFLAxWDdn7cO0O81hLtht7qDlIM5@dpg-cr8orodsvqrc739dkr7g-a.oregon-postgres.render.com/shems_data"
-    #os.getenv('DATABASE_URL')
+    DATABASE_URL = os.getenv('DATABASE_URL')
 
     # Parse the URL
     result = urlparse(DATABASE_URL)
