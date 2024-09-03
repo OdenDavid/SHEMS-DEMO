@@ -1,7 +1,9 @@
 # To run the application, you would use: uvicorn Simulator:app --host 0.0.0.0 --port 8080 --reload
 
 from fastapi import FastAPI, HTTPException
-import sqlite3
+import psycopg2
+import os
+from urllib.parse import urlparse
 import random
 from datetime import datetime
 import schedule
@@ -16,10 +18,33 @@ app = FastAPI()
 
 # Database connection function
 def get_db_connection():
-    conn = sqlite3.connect('Data.db')
-    conn.row_factory = sqlite3.Row
-    logging.info("DB connected")
-    return conn
+    
+    try:
+        # Your connection URL
+        DATABASE_URL = os.getenv('DATABASE_URL')
+
+        # Parse the URL
+        result = urlparse(DATABASE_URL)
+
+        # Extract the components
+        username = result.username
+        password = result.password
+        database = result.path[1:]  # remove the leading '/'
+        hostname = result.hostname
+        port = result.port
+
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(
+            dbname=database,
+            user=username,
+            password=password,
+            host=hostname,
+            port=port
+        )
+        logging.info("DB connected")
+        return conn
+    except psycopg2.OperationalError as e:
+        logging.info(f"Error: {e}")
 
 # Initialize energy produced to 0: For first runs
 energy_produced = 0
@@ -47,13 +72,13 @@ def simulate():
         appliance_condition = str_to_bool.get(appliance_condition, False)
 
         # Get the last observation from the energy usage table
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT *
             FROM EnergyUsage
-            WHERE HomeID = ? AND ApplianceID = ?
+            WHERE HomeID = {home_id} AND ApplianceID = {appliance_id}
             ORDER BY DateTime DESC
-            LIMIT 1
-        ''', (home_id, appliance_id))
+            LIMIT 1;
+        ''')
         last_observation = cursor.fetchone()
         try:
             current_temperature = last_observation['CurrentOutput']
@@ -66,11 +91,11 @@ def simulate():
             # Update the appliance condition
             new_condition = not appliance_condition
             
-            cursor.execute('''
+            cursor.execute(f'''
                 UPDATE Appliances
-                SET ApplianceCondition = ?
-                WHERE HomeID = ? AND ApplianceID = ?
-            ''', (str(new_condition), home_id, appliance_id))
+                SET ApplianceCondition = {str(new_condition)}
+                WHERE HomeID = {home_id} AND ApplianceID = {appliance_id}
+            ''')
         
         # If the appliance is on
         if appliance_condition:
@@ -102,10 +127,10 @@ def simulate():
         energy_produced += energy_consumed
 
         # Insert a new observation into the energy usage table
-        cursor.execute('''
+        cursor.execute(f'''
             INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (home_id, appliance_id, datetime.now(), energy_consumed, energy_produced, current_output))
+            VALUES ({home_id}, {appliance_id}, {datetime.now()}, {energy_consumed}, {energy_produced}, {current_output});
+        ''')
         logging.info(f"Inserted new observation for ApplianceID {appliance_id} in HomeID {home_id}")
 
     conn.commit()
