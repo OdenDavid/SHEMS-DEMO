@@ -93,7 +93,7 @@ def simulate():
             
             cursor.execute(f'''
                 UPDATE Appliances
-                SET ApplianceCondition = {str(new_condition)}
+                SET ApplianceCondition = '{str(new_condition)}'
                 WHERE HomeID = {home_id} AND ApplianceID = {appliance_id}
             ''')
         
@@ -126,10 +126,12 @@ def simulate():
         # Calculate the energy produced
         energy_produced += energy_consumed
 
+        now = datetime.now()
+        now = now.strftime("%Y-%m-%d %H:%M:%S")
         # Insert a new observation into the energy usage table
         cursor.execute(f'''
             INSERT INTO EnergyUsage (HomeID, ApplianceID, DateTime, EnergyConsumed, EnergyProduced, CurrentOutput)
-            VALUES ({home_id}, {appliance_id}, {datetime.now()}, {energy_consumed}, {energy_produced}, {current_output});
+            VALUES ({home_id}, {appliance_id}, '{str(datetime.now())}', {energy_consumed}, {energy_produced}, {current_output});
         ''')
         logging.info(f"Inserted new observation for ApplianceID {appliance_id} in HomeID {home_id}")
 
