@@ -1,7 +1,7 @@
-streamlit
-plotly
-schedule
-email-validator
-fastapi
-uvicorn
-psycopg2-binary
+streamlit           # User Interface
+plotly              # Dashboard Visualization
+schedule            # Schedule Simulator
+email-validator     # Validate Email Address
+fastapi             # Backend API
+uvicorn             # Backend Server Connection
+psycopg2-binary     # PostgresSQL/Python Library
