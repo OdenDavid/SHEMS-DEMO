@@ -766,7 +766,13 @@ elif st.session_state.page == "dashboard":
                 LIMIT {num_appliances}
             ) AS LastHourEnergy;
         ''')
-        current_energy_consumed = cursor.fetchone()[0] if cursor.fetchone() else 0
+        
+        current_energy_consumed = cursor.fetchone()[0]
+        if current_energy_consumed == None:
+            current_energy_consumed = 0.0
+        else:
+            pass
+        
         # Count unique appliances
         num_appliances = len(set(row[2] for row in energy_data))
 
