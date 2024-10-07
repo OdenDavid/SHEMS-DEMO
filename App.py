@@ -510,7 +510,7 @@ elif st.session_state.page == "dashboard":
             height=100,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="energysaved")
 
     def plot_gauge(indicator_number, indicator_color, indicator_suffix, indicator_title, max_bound):
         fig = go.Figure(
@@ -537,7 +537,7 @@ elif st.session_state.page == "dashboard":
             height=200,
             margin=dict(l=10, r=10, t=50, b=10, pad=8),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="energyconsumed")
 
     def get_appliances(home_id):
         """
@@ -874,7 +874,7 @@ elif st.session_state.page == "dashboard":
         # Plot line chart using Plotly Express
         fig = px.line(data['df_plot'], x=data['x_axis'], y='Energy (kWh)', color='Appliance')
         # Display chart
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="Appliance Consumption")
         # Add whitespace
         st.write("")
         st.write("")
