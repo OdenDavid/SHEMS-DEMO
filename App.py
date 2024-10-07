@@ -27,8 +27,8 @@ import os # communicate with system
 
 # =========== Establish Connection ==========
 try:
-    #DATABASE_URL = "postgresql://jshems_user:PZhH15mUYs93mfwMUKdBJKygvHnaFany@dpg-crd0tvaj1k6c73et7n60-a.oregon-postgres.render.com/jshems"
-    DATABASE_URL = os.getenv('DATABASE_URL')
+    DATABASE_URL = "postgresql://jshems_user:PZhH15mUYs93mfwMUKdBJKygvHnaFany@dpg-crd0tvaj1k6c73et7n60-a.oregon-postgres.render.com/jshems"
+    #DATABASE_URL = os.getenv('DATABASE_URL')
     # Parse the URL
     result = urlparse(DATABASE_URL)
     # Extract the components
