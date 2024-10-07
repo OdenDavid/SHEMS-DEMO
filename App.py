@@ -510,7 +510,7 @@ elif st.session_state.page == "dashboard":
             height=100,
         )
 
-        st.plotly_chart(fig, use_container_width=True, key="energysaved")
+        st.plotly_chart(fig, use_container_width=True, key=label)
 
     def plot_gauge(indicator_number, indicator_color, indicator_suffix, indicator_title, max_bound):
         fig = go.Figure(
