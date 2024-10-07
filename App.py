@@ -1,13 +1,12 @@
 """
-In an environment with streamlit installed,
-Run with `streamlit run App.py`
+In an environment with streamlit installed, Run with `streamlit run App.py`
 """
 
 # Streamlit and Data Visualization
 import streamlit as st # For building the web application
 import pandas as pd # Data manipulation and analysis
 import plotly.express as px # Data visualization
-import plotly.graph_objects as go # Data visualization
+import plotly.graph_objects as go # Data visualization 
 
 # Database Connectivity
 import psycopg2
@@ -28,18 +27,16 @@ import os # communicate with system
 
 # =========== Establish Connection ==========
 try:
+    #DATABASE_URL = "postgresql://jshems_user:PZhH15mUYs93mfwMUKdBJKygvHnaFany@dpg-crd0tvaj1k6c73et7n60-a.oregon-postgres.render.com/jshems"
     DATABASE_URL = os.getenv('DATABASE_URL')
-
     # Parse the URL
     result = urlparse(DATABASE_URL)
-
     # Extract the components
     username = result.username
     password = result.password
     database = result.path[1:]  # remove the leading '/'
     hostname = result.hostname
     port = result.port
-
     # Connect to the PostgreSQL database
     conn = psycopg2.connect(
         dbname=database,
@@ -271,7 +268,6 @@ def register_home(home_id, home_name, email, address="", other=""):
 def check_login(home_name, home_id):
     """
     Checks if a home exists in the database.
-
     Args:
         home_name (str): Name of the home
         home_id (int): Unique home ID
@@ -514,7 +510,7 @@ elif st.session_state.page == "dashboard":
             height=100,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=label)
 
     def plot_gauge(indicator_number, indicator_color, indicator_suffix, indicator_title, max_bound):
         fig = go.Figure(
@@ -744,7 +740,6 @@ elif st.session_state.page == "dashboard":
                 WHERE HomeID = {home_id};
             ''')
         energy_data = cursor.fetchall()
-
         total_energy_consumed = sum(row[4] for row in energy_data) # Calculate total energy consumed
 
         # Get the number of appliances for the home
@@ -799,8 +794,8 @@ elif st.session_state.page == "dashboard":
 
         # Calculate Energy Saved
         appliance_energy_consumption = {
-            'Scanfrost Refrigerator': 0.04,
             'Hisense Deep Freezer': 0.8,
+            'Scanfrost Refrigerator': 0.04,
             'LG Air Conditioner': 0.001
         }
 
@@ -809,7 +804,7 @@ elif st.session_state.page == "dashboard":
             appliance_energy_consumption[list(appliance_energy_consumption.keys())[row[2] - 1]] * 1  # assuming 1 hour interval
             for row in energy_data
         )
-
+        
         # Calculate energy saved
         energy_saved = total_energy_consumption_from_appliances - total_energy_consumed
 
