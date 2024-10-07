@@ -1,4 +1,4 @@
-streamlit           # User Interface
+streamlit==1.36.0   # User Interface
 plotly              # Dashboard Visualization
 schedule            # Schedule Simulator
 email-validator     # Validate Email Address
